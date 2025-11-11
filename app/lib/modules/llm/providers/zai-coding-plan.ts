@@ -5,7 +5,7 @@ import type { IProviderSetting } from '~/types/model';
 import { createOpenAI } from '@ai-sdk/openai';
 
 export default class GLMCodingProvider extends BaseProvider {
-  name = 'Z AI (Coding Plan)';
+  name = 'GLM Code Plan';
   getApiKeyLink = 'https://z.ai/subscribe';
 
   config = {
@@ -16,14 +16,14 @@ export default class GLMCodingProvider extends BaseProvider {
     {
       name: 'glm-4.6',
       label: 'GLM-4.6',
-      provider: 'Z AI (Coding Plan)',
+      provider: 'GLM Code Plan',
       maxTokenAllowed: 200000,
       maxCompletionTokens: 128000,
     },
     {
       name: 'glm-4.5-air',
       label: 'GLM-4.5 Air',
-      provider: 'Z AI (Coding Plan)',
+      provider: 'GLM Code Plan',
       maxTokenAllowed: 128000,
       maxCompletionTokens: 96000,
     },
