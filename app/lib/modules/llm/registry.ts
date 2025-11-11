@@ -16,6 +16,11 @@ import XAIProvider from './providers/xai';
 import HyperbolicProvider from './providers/hyperbolic';
 import AmazonBedrockProvider from './providers/amazon-bedrock';
 import GithubProvider from './providers/github';
+import MoonshotProvider from './providers/moonshot';
+import ZAIProvider from './providers/zai-api';
+import GLMCodingProvider from './providers/zai-coding-plan';
+import MiniMaxProvider from './providers/minimax';
+import AlibabaProvider from './providers/alibaba';
 
 export {
   AnthropicProvider,
@@ -36,4 +41,8 @@ export {
   LMStudioProvider,
   AmazonBedrockProvider,
   GithubProvider,
+  ZAIProvider,
+  GLMCodingProvider,
+  MiniMaxProvider,
+  AlibabaProvider,
 };
