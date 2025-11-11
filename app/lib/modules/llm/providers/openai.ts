@@ -13,11 +13,41 @@ export default class OpenAIProvider extends BaseProvider {
   };
 
   staticModels: ModelInfo[] = [
-    { name: 'gpt-4o', label: 'GPT-4o', provider: 'OpenAI', maxTokenAllowed: 8000 },
-    { name: 'gpt-4o-mini', label: 'GPT-4o Mini', provider: 'OpenAI', maxTokenAllowed: 8000 },
-    { name: 'gpt-4-turbo', label: 'GPT-4 Turbo', provider: 'OpenAI', maxTokenAllowed: 8000 },
-    { name: 'gpt-4', label: 'GPT-4', provider: 'OpenAI', maxTokenAllowed: 8000 },
-    { name: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo', provider: 'OpenAI', maxTokenAllowed: 8000 },
+    /*
+     * Essential fallback models - only the most stable/reliable ones
+     * GPT-4o: 128k context, 4k standard output (64k with long output mode)
+     */
+    { name: 'gpt-5', label: 'GPT-5', provider: 'OpenAI', maxTokenAllowed: 400000, maxCompletionTokens: 128000 },
+
+    // GPT-4o Mini: 128k context, cost-effective alternative
+    {
+      name: 'gpt-5-mini',
+      label: 'GPT-5 Mini',
+      provider: 'OpenAI',
+      maxTokenAllowed: 400000,
+      maxCompletionTokens: 128000,
+    },
+
+    // GPT-3.5-turbo: 16k context, fast and cost-effective
+    {
+      name: 'gpt-4.1',
+      label: 'GPT 4.1',
+      provider: 'OpenAI',
+      maxTokenAllowed: 1047576,
+      maxCompletionTokens: 32768,
+    },
+
+    // o1-preview: 128k context, 32k output limit (reasoning model)
+    {
+      name: 'gpt-5-codex',
+      label: 'GPT 5 Codex',
+      provider: 'OpenAI',
+      maxTokenAllowed: 400000,
+      maxCompletionTokens: 128000,
+    },
+
+    // o1-mini: 128k context, 65k output limit (reasoning model)
+    { name: 'codex-mini-latest', label: 'Codex Mini', provider: 'OpenAI', maxTokenAllowed: 200000, maxCompletionTokens: 100000 },
   ];
 
   async getDynamicModels(
@@ -25,42 +55,10 @@ export default class OpenAIProvider extends BaseProvider {
     settings?: IProviderSetting,
     serverEnv?: Record<string, string>,
   ): Promise<ModelInfo[]> {
-    const { apiKey } = this.getProviderBaseUrlAndKey({
-      apiKeys,
-      providerSettings: settings,
-      serverEnv: serverEnv as any,
-      defaultBaseUrlKey: '',
-      defaultApiTokenKey: 'OPENAI_API_KEY',
-    });
-
-    if (!apiKey) {
-      throw `Missing Api Key configuration for ${this.name} provider`;
-    }
-
-    const response = await fetch(`https://api.openai.com/v1/models`, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
-    });
-
-    const res = (await response.json()) as any;
-    const staticModelIds = this.staticModels.map((m) => m.name);
-
-    const data = res.data.filter(
-      (model: any) =>
-        model.object === 'model' &&
-        (model.id.startsWith('gpt-') || model.id.startsWith('o') || model.id.startsWith('chatgpt-')) &&
-        !staticModelIds.includes(model.id),
-    );
-
-    return data.map((m: any) => ({
-      name: m.id,
-      label: `${m.id}`,
-      provider: this.name,
-      maxTokenAllowed: m.context_window || 32000,
-    }));
+    // Return static models only
+    return [];
   }
-
+  
   getModelInstance(options: {
     model: string;
     serverEnv: Env;
