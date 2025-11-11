@@ -41,6 +41,7 @@ export {
   LMStudioProvider,
   AmazonBedrockProvider,
   GithubProvider,
+  MoonshotProvider,
   ZAIProvider,
   GLMCodingProvider,
   MiniMaxProvider,
