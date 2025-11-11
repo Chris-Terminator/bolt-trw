@@ -5,6 +5,73 @@ import type { ProviderInfo } from '~/types/model';
 import { getApiKeysFromCookie, getProviderSettingsFromCookie } from '~/lib/api/cookies';
 import { createScopedLogger } from '~/utils/logger';
 
+// Strip provider reasoning/thinking content (e.g., <think>...</think>) from SSE stream chunks.
+// This preserves streaming while ensuring no "thinking" content leaks into the enhanced prompt.
+function createReasoningStripStream(input: AsyncIterable<string>): ReadableStream<Uint8Array> {
+  const textEncoder = new TextEncoder();
+
+  // We'll maintain a rolling buffer to correctly handle <think> tags that span chunk boundaries.
+  let buffer = '';
+
+  function stripThinkingFromBuffer(): { output: string; keep: string } {
+    // Process buffer to remove any complete <think>...</think> segments.
+    // Emit only the text outside of <think> blocks. If an opening tag is found
+    // without its closing tag in the current buffer, we keep it in 'keep' for the next chunk.
+    let out = '';
+    let idx = 0;
+
+    const indexOf = (s: string, search: string, from: number) => s.indexOf(search, from);
+
+    while (true) {
+      const openIdx = indexOf(buffer, '<think>', idx);
+      if (openIdx === -1) {
+        out += buffer.slice(idx);
+        return { output: out, keep: '' };
+      }
+
+      // Emit content before the <think> tag
+      out += buffer.slice(idx, openIdx);
+
+      const closeIdx = indexOf(buffer, '</think>', openIdx + 7);
+      if (closeIdx === -1) {
+        // Keep partial block for next chunk
+        const keep = buffer.slice(openIdx);
+        return { output: out, keep };
+      }
+
+      // Skip the entire <think>...</think> block
+      idx = closeIdx + 8; // '</think>'
+    }
+  }
+
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      try {
+        // Consume AsyncIterable<string>
+        for await (const chunkText of input as any) {
+          buffer += chunkText;
+
+          const { output, keep } = stripThinkingFromBuffer();
+          buffer = keep; // Keep any unterminated <think>... for the next chunk
+
+          if (output) {
+            controller.enqueue(textEncoder.encode(output));
+          }
+        }
+
+        // Flush: drop any remaining unterminated <think> block content
+        if (buffer && !buffer.includes('<think>')) {
+          controller.enqueue(textEncoder.encode(buffer));
+        }
+
+        controller.close();
+      } catch (err) {
+        controller.error(err);
+      }
+    },
+  });
+}
+
 export async function action(args: ActionFunctionArgs) {
   return enhancerAction(args);
 }
@@ -110,8 +177,9 @@ async function enhancerAction({ context, request }: ActionFunctionArgs) {
       }
     })();
 
-    // Return the text stream directly since it's already text data
-    return new Response(result.textStream, {
+    // Return the text stream after stripping any provider "thinking" content from the stream
+    const cleanedStream = createReasoningStripStream(result.textStream as any);
+    return new Response(cleanedStream, {
       status: 200,
       headers: {
         'Content-Type': 'text/event-stream',
