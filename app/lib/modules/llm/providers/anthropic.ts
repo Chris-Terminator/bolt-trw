@@ -13,33 +13,35 @@ export default class AnthropicProvider extends BaseProvider {
   };
 
   staticModels: ModelInfo[] = [
+    /*
+     * Essential fallback models - only the most stable/reliable ones
+     * Claude Haiku 4.5: 200k context, excellent for quick reasoning and coding
+     */
     {
-      name: 'claude-3-7-sonnet-20250219',
-      label: 'Claude 3.7 Sonnet',
+      name: 'claude-haiku-4-5-20251001',
+      label: 'Claude Haiku 4.5',
       provider: 'Anthropic',
-      maxTokenAllowed: 128000,
+      maxTokenAllowed: 200000,
+      maxCompletionTokens: 64000,
     },
+
+    // Claude Sonnet 4.5: 1M context, (latest flagship model)
     {
-      name: 'claude-3-5-sonnet-latest',
-      label: 'Claude 3.5 Sonnet (new)',
+      name: 'claude-sonnet-4-5-20250929',
+      label: 'Claude Sonnet 4.5',
       provider: 'Anthropic',
-      maxTokenAllowed: 8000,
+      maxTokenAllowed: 1000000,
+      maxCompletionTokens: 64000,
     },
+
+    // Claude Opus 4.1: 200k context, 32k output limit 
     {
-      name: 'claude-3-5-sonnet-20240620',
-      label: 'Claude 3.5 Sonnet (old)',
+      name: 'claude-opus-4-1-20250805',
+      label: 'Claude Opus 4.1',
       provider: 'Anthropic',
-      maxTokenAllowed: 8000,
+      maxTokenAllowed: 200000,
+      maxCompletionTokens: 32000,
     },
-    {
-      name: 'claude-3-5-haiku-latest',
-      label: 'Claude 3.5 Haiku (new)',
-      provider: 'Anthropic',
-      maxTokenAllowed: 8000,
-    },
-    { name: 'claude-3-opus-latest', label: 'Claude 3 Opus', provider: 'Anthropic', maxTokenAllowed: 8000 },
-    { name: 'claude-3-sonnet-20240229', label: 'Claude 3 Sonnet', provider: 'Anthropic', maxTokenAllowed: 8000 },
-    { name: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku', provider: 'Anthropic', maxTokenAllowed: 8000 },
   ];
 
   async getDynamicModels(
@@ -47,38 +49,9 @@ export default class AnthropicProvider extends BaseProvider {
     settings?: IProviderSetting,
     serverEnv?: Record<string, string>,
   ): Promise<ModelInfo[]> {
-    const { apiKey } = this.getProviderBaseUrlAndKey({
-      apiKeys,
-      providerSettings: settings,
-      serverEnv: serverEnv as any,
-      defaultBaseUrlKey: '',
-      defaultApiTokenKey: 'ANTHROPIC_API_KEY',
-    });
-
-    if (!apiKey) {
-      throw `Missing Api Key configuration for ${this.name} provider`;
-    }
-
-    const response = await fetch(`https://api.anthropic.com/v1/models`, {
-      headers: {
-        'x-api-key': `${apiKey}`,
-        'anthropic-version': '2023-06-01',
-      },
-    });
-
-    const res = (await response.json()) as any;
-    const staticModelIds = this.staticModels.map((m) => m.name);
-
-    const data = res.data.filter((model: any) => model.type === 'model' && !staticModelIds.includes(model.id));
-
-    return data.map((m: any) => ({
-      name: m.id,
-      label: `${m.display_name}`,
-      provider: this.name,
-      maxTokenAllowed: 32000,
-    }));
+    // Return static models only
+    return [];
   }
-
   getModelInstance: (options: {
     model: string;
     serverEnv: Env;
@@ -95,8 +68,12 @@ export default class AnthropicProvider extends BaseProvider {
     });
     const anthropic = createAnthropic({
       apiKey,
-      headers: { 'anthropic-beta': 'output-128k-2025-02-19' },
+      headers: { 'anthropic-beta': 'context-1m-2025-08-07' },
     });
+
+    if (!apiKey) {
+      throw new Error(`Missing API key for ${this.name} provider`);
+    }
 
     return anthropic(model);
   };
