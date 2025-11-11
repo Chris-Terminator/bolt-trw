@@ -186,7 +186,7 @@ export default class AlibabaProvider extends BaseProvider {
     // Filter for Qwen models and exclude static models to avoid duplicates
     const data = res.data.filter(
       (model: any) =>
-        model.object === 'model' && isLikelyCodeModel(this.name, model.id) && !staticModelIds.includes(model.id),
+        model.object === 'model' && !staticModelIds.includes(model.id),
     );
 
     return data.map((m: any) => {

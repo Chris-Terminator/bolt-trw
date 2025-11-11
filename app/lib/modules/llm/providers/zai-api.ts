@@ -55,7 +55,7 @@ export default class ZAIProvider extends BaseProvider {
 
   getModelInstance(options: {
     model: string;
-    serverEnv: Record<string, string>;
+    serverEnv: Env;
     apiKeys?: Record<string, string>;
     providerSettings?: Record<string, IProviderSetting>;
   }): LanguageModelV1 {
@@ -76,6 +76,7 @@ export default class ZAIProvider extends BaseProvider {
     return createOpenAI({
       apiKey,
       baseURL: 'https://api.z.ai/api/paas/v4',
+      compatibility: 'compatible',
     })(model);
   }
 }

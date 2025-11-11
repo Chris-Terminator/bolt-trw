@@ -56,7 +56,7 @@ export default class OpenAILikeProvider extends BaseProvider {
 
       // Fallback to OPENAI_LIKE_API_MODELS if available
       // eslint-disable-next-line dot-notation
-      const modelsEnv = serverEnv['OPENAI_LIKE_API_MODELS'] || settings?.OPENAI_LIKE_API_MODELS;
+      const modelsEnv = serverEnv['OPENAI_LIKE_API_MODELS'] || (settings as any)?.OPENAI_LIKE_API_MODELS;
 
       if (modelsEnv) {
         console.log(`${this.name}: OPENAI_LIKE_API_MODELS=${modelsEnv}`);

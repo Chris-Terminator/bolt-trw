@@ -33,7 +33,23 @@ function sanitizeText(text: string): string {
 
   return sanitized.trim();
 }
-
+ 
+// Minimal reasoning-model detection to align with bolt-wip behavior
+function isReasoningModel(modelName: string): boolean {
+  const name = (modelName || '').toLowerCase();
+  // Common reasoning families and aliases
+  return (
+    name.includes('o1') ||
+    name.includes('o3') ||
+    name.includes('reason') ||
+    name.includes('gpt-5') ||
+    name.includes('codex') ||
+    name.includes('deepseek-r') ||
+    name.includes('think') ||
+    name.includes('r1')
+  );
+}
+ 
 export async function streamText(props: {
   messages: Omit<Message, 'id'>[];
   env?: Env;
@@ -116,9 +132,17 @@ export async function streamText(props: {
     }
   }
 
-  const dynamicMaxTokens = modelDetails && modelDetails.maxTokenAllowed ? modelDetails.maxTokenAllowed : MAX_TOKENS;
+  // Prefer model completion limit if available; otherwise cap by context window and MAX_TOKENS
+  const completionLimit = (modelDetails as any)?.maxCompletionTokens as number | undefined;
+  const dynamicMaxTokens =
+    typeof completionLimit === 'number' && completionLimit > 0
+      ? completionLimit
+      : modelDetails && modelDetails.maxTokenAllowed
+        ? Math.min(modelDetails.maxTokenAllowed, MAX_TOKENS)
+        : MAX_TOKENS;
+
   logger.info(
-    `Max tokens for model ${modelDetails.name} is ${dynamicMaxTokens} based on ${modelDetails.maxTokenAllowed} or ${MAX_TOKENS}`,
+    `Token limits for model ${modelDetails.name}: maxTokens=${dynamicMaxTokens}, maxTokenAllowed=${modelDetails.maxTokenAllowed}, maxCompletionTokens=${(modelDetails as any)?.maxCompletionTokens ?? 'n/a'}`,
   );
 
   let systemPrompt =
@@ -195,7 +219,31 @@ export async function streamText(props: {
 
   // console.log(systemPrompt, processedMessages);
 
-  return await _streamText({
+  // Reasoning-aware parameter construction (aligned with bolt-wip semantics)
+  const reasoningModel = isReasoningModel(modelDetails.name);
+  logger.info(
+    `Model "${modelDetails.name}" reasoning=${reasoningModel}; using ${reasoningModel ? 'maxCompletionTokens' : 'maxTokens'}=${dynamicMaxTokens}`,
+  );
+ 
+  // For reasoning models, some providers reject sampling controls or extra params
+  const filteredOptions =
+    reasoningModel && options
+      ? Object.fromEntries(
+          Object.entries(options).filter(([key]) =>
+            ![
+              'temperature',
+              'topP',
+              'presencePenalty',
+              'frequencyPenalty',
+              'logprobs',
+              'topLogprobs',
+              'logitBias',
+            ].includes(key),
+          ),
+        )
+      : options || {};
+ 
+  const streamParams = {
     model: provider.getModelInstance({
       model: modelDetails.name,
       serverEnv,
@@ -203,8 +251,11 @@ export async function streamText(props: {
       providerSettings,
     }),
     system: chatMode === 'build' ? systemPrompt : discussPrompt(),
-    maxTokens: dynamicMaxTokens,
+    ...(reasoningModel ? { maxCompletionTokens: dynamicMaxTokens } : { maxTokens: dynamicMaxTokens }),
     messages: convertToCoreMessages(processedMessages as any),
-    ...options,
-  });
+    ...filteredOptions,
+    ...(reasoningModel ? { temperature: 1 } : {}),
+  };
+ 
+  return await _streamText(streamParams);
 }
