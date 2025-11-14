@@ -17,7 +17,7 @@ export default class OpenAIProvider extends BaseProvider {
      * Essential fallback models - only the most stable/reliable ones
      * GPT-4o: 128k context, 4k standard output (64k with long output mode)
      */
-    { name: 'gpt-5', label: 'GPT-5', provider: 'OpenAI', maxTokenAllowed: 400000, maxCompletionTokens: 128000 },
+    { name: 'gpt-5.1', label: 'GPT-5.1', provider: 'OpenAI', maxTokenAllowed: 400000, maxCompletionTokens: 128000 },
 
     // GPT-4o Mini: 128k context, cost-effective alternative
     {
@@ -31,23 +31,23 @@ export default class OpenAIProvider extends BaseProvider {
     // GPT-3.5-turbo: 16k context, fast and cost-effective
     {
       name: 'gpt-4.1',
-      label: 'GPT 4.1',
+      label: 'GPT-4.1',
       provider: 'OpenAI',
-      maxTokenAllowed: 1047576,
+      maxTokenAllowed: 1048576,
       maxCompletionTokens: 32768,
     },
 
     // o1-preview: 128k context, 32k output limit (reasoning model)
     {
-      name: 'gpt-5-codex',
-      label: 'GPT 5 Codex',
+      name: 'gpt-5.1-codex',
+      label: 'GPT-5.1 Codex',
       provider: 'OpenAI',
       maxTokenAllowed: 400000,
       maxCompletionTokens: 128000,
     },
 
     // o1-mini: 128k context, 65k output limit (reasoning model)
-    { name: 'codex-mini-latest', label: 'Codex Mini', provider: 'OpenAI', maxTokenAllowed: 200000, maxCompletionTokens: 100000 },
+    { name: 'gpt-5.1-codex-mini', label: 'GPT-5.1-Codex Mini', provider: 'OpenAI', maxTokenAllowed: 400000, maxCompletionTokens: 128000 },
   ];
 
   async getDynamicModels(
