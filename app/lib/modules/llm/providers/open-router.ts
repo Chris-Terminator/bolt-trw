@@ -12,6 +12,9 @@ interface OpenRouterModel {
     prompt: number;
     completion: number;
   };
+   top_provider: {
+    max_completion_tokens: number;
+  };
 }
 
 interface OpenRouterModelsResponse {
@@ -70,12 +73,13 @@ export default class OpenRouterProvider extends BaseProvider {
           // Cap at reasonable limits to prevent issues (OpenRouter has some very large models)
           const maxAllowed = 1000000; // 1M tokens max for safety
           const finalContext = Math.min(contextWindow, maxAllowed);
+          const maxCompTokens = m.top_provider.max_completion_tokens;
 
           return {
             name: m.id,
             label: `${m.name} - in:$${(m.pricing.prompt * 1_000_000).toFixed(2)} out:$${(m.pricing.completion * 1_000_000).toFixed(2)} - context ${finalContext >= 1000000 ? Math.floor(finalContext / 1000000) + 'M' : Math.floor(finalContext / 1000) + 'k'}`,
             provider: this.name,
-            maxTokenAllowed: finalContext,
+            maxTokenAllowed: maxCompTokens,
           };
         });
     } catch (error) {

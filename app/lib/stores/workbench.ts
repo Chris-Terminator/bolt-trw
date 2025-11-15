@@ -42,6 +42,7 @@ export class WorkbenchStore {
   #terminalStore = new TerminalStore(webcontainer);
 
   #reloadedMessages = new Set<string>();
+  #artifactById = new Map<string, string>();
 
   artifacts: Artifacts = import.meta.hot?.data.artifacts ?? map({});
 
@@ -59,6 +60,12 @@ export class WorkbenchStore {
   #globalExecutionQueue = Promise.resolve();
   constructor() {
     if (import.meta.hot) {
+      if (import.meta.hot.data.artifactById) {
+        this.#artifactById = import.meta.hot.data.artifactById as Map<string, string>;
+      } else {
+        import.meta.hot.data.artifactById = this.#artifactById;
+      }
+
       import.meta.hot.data.artifacts = this.artifacts;
       import.meta.hot.data.unsavedFiles = this.unsavedFiles;
       import.meta.hot.data.showWorkbench = this.showWorkbench;
@@ -472,6 +479,10 @@ export class WorkbenchStore {
       return;
     }
 
+    if (this.#artifactById.has(id)) {
+      return;
+    }
+
     if (!this.artifactIdList.includes(messageId)) {
       this.artifactIdList.push(messageId);
     }
@@ -507,6 +518,8 @@ export class WorkbenchStore {
         },
       ),
     });
+
+    this.#artifactById.set(id, messageId);
   }
 
   updateArtifact({ messageId }: ArtifactCallbackData, state: Partial<ArtifactUpdateState>) {

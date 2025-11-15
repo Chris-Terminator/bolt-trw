@@ -62,6 +62,7 @@ export default class GLMCodingProvider extends BaseProvider {
     return createOpenAI({
       apiKey,
       baseURL: 'https://api.z.ai/api/coding/paas/v4',
+      compatibility: "compatible",
     })(model);
   }
 }
