@@ -18,7 +18,6 @@ export default class OpenAIProvider extends BaseProvider {
      * GPT-4o: 128k context, 4k standard output (64k with long output mode)
      */
     { name: 'gpt-5.1', label: 'GPT-5.1', provider: 'OpenAI', maxTokenAllowed: 400000, maxCompletionTokens: 128000 },
-
     // GPT-4o Mini: 128k context, cost-effective alternative
     {
       name: 'gpt-5-mini',
@@ -33,7 +32,7 @@ export default class OpenAIProvider extends BaseProvider {
       name: 'gpt-4.1',
       label: 'GPT-4.1',
       provider: 'OpenAI',
-      maxTokenAllowed: 1047576,
+      maxTokenAllowed: 1048576,
       maxCompletionTokens: 32768,
     },
 
