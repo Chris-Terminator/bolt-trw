@@ -8,6 +8,7 @@ import {
   autoSelectStarterTemplate,
   enableContextOptimizationStore,
   tabConfigurationStore,
+  agentMaxStepsStore,
   resetTabConfiguration as resetTabConfig,
   updateProviderSettings as updateProviderSettingsStore,
   updateLatestBranch,
@@ -15,6 +16,7 @@ import {
   updateContextOptimization,
   updateEventLogs,
   updatePromptId,
+  updateAgentMaxSteps,
 } from '~/lib/stores/settings';
 import { useCallback, useEffect, useState } from 'react';
 import Cookies from 'js-cookie';
@@ -59,6 +61,10 @@ export interface UseSettingsReturn {
   contextOptimizationEnabled: boolean;
   enableContextOptimization: (enabled: boolean) => void;
 
+  // Agent settings
+  agentMaxSteps: number;
+  setAgentMaxSteps: (steps: number) => void;
+
   // Tab configuration
   tabConfiguration: TabWindowConfig;
   resetTabConfiguration: () => void;
@@ -79,6 +85,7 @@ export function useSettings(): UseSettingsReturn {
   const [activeProviders, setActiveProviders] = useState<ProviderInfo[]>([]);
   const contextOptimizationEnabled = useStore(enableContextOptimizationStore);
   const tabConfiguration = useStore(tabConfigurationStore);
+  const agentMaxSteps = useStore(agentMaxStepsStore);
   const [settings, setSettings] = useState<Settings>(() => {
     const storedSettings = getLocalStorage('settings');
     return {
@@ -143,6 +150,11 @@ export function useSettings(): UseSettingsReturn {
     logStore.logSystem(`Context optimization ${enabled ? 'enabled' : 'disabled'}`);
   }, []);
 
+  const setAgentMaxSteps = useCallback((steps: number) => {
+    updateAgentMaxSteps(steps);
+    logStore.logSystem(`Agent max steps updated to ${steps}`);
+  }, []);
+
   const setTheme = useCallback(
     (theme: Settings['theme']) => {
       saveSettings({ theme });
@@ -197,6 +209,8 @@ export function useSettings(): UseSettingsReturn {
     setAutoSelectTemplate,
     contextOptimizationEnabled,
     enableContextOptimization,
+    agentMaxSteps,
+    setAgentMaxSteps,
     setTheme,
     setLanguage,
     setNotifications,

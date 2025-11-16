@@ -39,24 +39,35 @@ function parseCookies(cookieHeader: string): Record<string, string> {
 }
 
 async function chatAction({ context, request }: ActionFunctionArgs) {
-  const { messages, files, promptId, contextOptimization, supabase, chatMode, designScheme, maxLLMSteps } =
-    await request.json<{
-      messages: Messages;
-      files: any;
-      promptId?: string;
-      contextOptimization: boolean;
-      chatMode: 'discuss' | 'build';
-      designScheme?: DesignScheme;
-      supabase?: {
-        isConnected: boolean;
-        hasSelectedProject: boolean;
-        credentials?: {
-          anonKey?: string;
-          supabaseUrl?: string;
-        };
+  const {
+    messages,
+    files,
+    promptId,
+    contextOptimization,
+    supabase,
+    chatMode,
+    designScheme,
+    maxLLMSteps,
+    agentMode,
+  } = await request.json<{
+    messages: Messages;
+    files: any;
+    promptId?: string;
+    contextOptimization: boolean;
+    chatMode: 'discuss' | 'build';
+    designScheme?: DesignScheme;
+    supabase?: {
+      isConnected: boolean;
+      hasSelectedProject: boolean;
+      credentials?: {
+        anonKey?: string;
+        supabaseUrl?: string;
       };
-      maxLLMSteps: number;
-    }>();
+    };
+    maxLLMSteps: number;
+    agentMode?: boolean;
+    // agentConfig?: import('~/types/agent').AgentConfig; // Removed - not used in simplified implementation
+  }>();
 
   const cookieHeader = request.headers.get('Cookie');
   const apiKeys = JSON.parse(parseCookies(cookieHeader || '').apiKeys || '{}');
@@ -78,6 +89,185 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
     const mcpService = MCPService.getInstance();
     const totalMessageContent = messages.reduce((acc, message) => acc + message.content, '');
     logger.debug(`Total message length: ${totalMessageContent.split(' ').length}, words`);
+
+    // Check if agent mode is enabled
+    if (agentMode) {
+      logger.info('Agent mode enabled - using streamText loop approach');
+      
+      const dataStream = createDataStream({
+        async execute(dataStream) {
+          let processedMessages = await mcpService.processToolInvocations(messages, dataStream);
+          
+          // STEP 1: Planning - use streamText to get structured plan
+          logger.info('Agent: Planning phase');
+          
+          // Extract model/provider from original user message and preserve it
+          const lastUserMessage = processedMessages.filter((x) => x.role == 'user').slice(-1)[0];
+          const { model, provider } = extractPropertiesFromMessage(lastUserMessage);
+          
+          processedMessages.push({
+            id: generateId(),
+            role: 'user',
+            content: `[Model: ${model}]\n\n[Provider: ${provider}]\n\n[AGENT PLANNING] Create 3-5 code generation todos. Respond ONLY with JSON: {"todos": [{"id":"todo_1", "title":"Setup", "priority":"high"}]}`,
+          });
+          
+          const planningResult = await streamText({
+            messages: processedMessages,
+            env: context.cloudflare?.env,
+            options: {
+              supabaseConnection: supabase,
+              toolChoice: 'auto',
+              tools: mcpService.toolsWithoutExecute,
+              maxSteps: 1,
+              onFinish: async ({ usage }) => {
+                if (usage) {
+                  cumulativeUsage.completionTokens += usage.completionTokens || 0;
+                  cumulativeUsage.promptTokens += usage.promptTokens || 0;
+                  cumulativeUsage.totalTokens += usage.totalTokens || 0;
+                }
+              },
+            },
+            apiKeys,
+            files,
+            providerSettings,
+            promptId,
+            contextOptimization: false,
+            contextFiles: undefined,
+            chatMode: 'build',
+            designScheme,
+            summary: undefined,
+            messageSliceId: 0,
+          });
+          
+          const planText = await planningResult.text;
+          const planData = JSON.parse(planText);
+          const plan: import('~/types/agent').AgentPlan = {
+            todos: planData.todos.map((t: any) => ({
+              ...t,
+              status: 'pending' as const,
+              priority: t.priority || 'medium',
+              createdAt: new Date().toISOString(),
+            })),
+            estimatedSteps: planData.todos.length * 3,
+            strategy: 'Generate code for each todo using normal mode streaming',
+            createdAt: new Date().toISOString(),
+          };
+          
+          // Send plan to UI
+          dataStream.writeMessageAnnotation({
+            type: 'agentPlan',
+            plan,
+          } as any);
+          
+          // Trigger workbench to show (makes chat shift left)
+          dataStream.writeMessageAnnotation({
+            type: 'triggerWorkbench',
+            show: true,
+          } as any);
+          
+          logger.info(`Agent: Plan created with ${plan.todos.length} todos`);
+          
+          // STEP 2: Execute each todo using normal mode's streamText
+          for (const todo of plan.todos) {
+            // Mark todo as in progress
+            todo.status = 'in_progress';
+            dataStream.writeMessageAnnotation({
+              type: 'agentPlan',
+              plan,
+            } as any);
+            
+            logger.info(`Agent: Starting todo "${todo.title}"`);
+            
+            // Add todo context to messages with model/provider metadata
+            processedMessages.push({
+              id: generateId(),
+              role: 'user',
+              content: `[Model: ${model}]\n\n[Provider: ${provider}]\n\n[AGENT TODO] Complete this task: ${todo.title}${todo.description ? ` - ${todo.description}` : ''}
+
+Generate a complete boltArtifact with all necessary files and commands.`,
+            });
+            
+            // Use normal mode's streamText - this handles ALL the UI updates
+            const todoResult = await streamText({
+              messages: processedMessages,
+              env: context.cloudflare?.env,
+              options: {
+                supabaseConnection: supabase,
+                toolChoice: 'auto',
+                tools: mcpService.toolsWithoutExecute,
+                maxSteps: 1,
+                onStepFinish: ({ toolCalls }) => {
+                  toolCalls.forEach((toolCall) => {
+                    mcpService.processToolCall(toolCall, dataStream);
+                  });
+                },
+               onFinish: async ({ usage }) => {
+                  if (usage) {
+                    cumulativeUsage.completionTokens += usage.completionTokens || 0;
+                    cumulativeUsage.promptTokens += usage.promptTokens || 0;
+                    cumulativeUsage.totalTokens += usage.totalTokens || 0;
+                  }
+                },
+              },
+              apiKeys,
+              files,
+              providerSettings,
+              promptId,
+              contextOptimization: false,
+              contextFiles: undefined,
+              chatMode: 'build',
+              designScheme,
+              summary: undefined,
+              messageSliceId: 0,
+            });
+            
+            // Stream the result - this makes artifacts appear in UI!
+            todoResult.mergeIntoDataStream(dataStream);
+            
+            // Wait for stream to complete
+            const todoText = await todoResult.text;
+            
+            // Add response to message history
+            processedMessages.push({
+              id: generateId(),
+              role: 'assistant',
+              content: todoText,
+            });
+            
+            // Mark todo as completed
+            todo.status = 'completed';
+            todo.results = 'Artifact generated';
+            todo.completedAt = new Date().toISOString();
+            
+            dataStream.writeMessageAnnotation({
+              type: 'agentPlan',
+              plan,
+            } as any);
+            
+            logger.info(`Agent: Completed todo "${todo.title}"`);
+          }
+          
+          // STEP 3: Send final summary
+          dataStream.writeMessageAnnotation({
+            type: 'usage',
+            value: cumulativeUsage,
+          });
+          
+          logger.info('Agent: All todos completed');
+        },
+        onError: (error: any) => `Agent error: ${error.message}`,
+      });
+      
+      return new Response(dataStream, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/event-stream; charset=utf-8',
+          Connection: 'keep-alive',
+          'Cache-Control': 'no-cache',
+          'Text-Encoding': 'chunked',
+        },
+      });
+    }
 
     let lastChunk: string | undefined = undefined;
 

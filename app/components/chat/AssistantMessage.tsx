@@ -17,6 +17,9 @@ import type {
 } from '@ai-sdk/ui-utils';
 import { ToolInvocations } from './ToolInvocations';
 import type { ToolCallAnnotation } from '~/types/context';
+import { AgentTimeline } from './AgentTimeline';
+import { AgentTodoList } from './AgentTodoList';
+import type { AgentPlan } from '~/types/agent';
 
 interface AssistantMessageProps {
   content: string;
@@ -102,9 +105,42 @@ export const AssistantMessage = memo(
       (annotation) => annotation.type === 'toolCall',
     ) as ToolCallAnnotation[];
 
+    // Extract agent-related annotations (simplified)
+    const agentPlan = filteredAnnotations.find((annotation) => annotation.type === 'agentPlan');
+    const plan = agentPlan ? (agentPlan as any).plan as AgentPlan : null;
+    
+    // Get current todo ID from latest plan update
+    const planUpdateSteps = filteredAnnotations
+      .filter((annotation) => annotation.type === 'agentPlan')
+      .map((annotation: any) => (annotation as any).plan as AgentPlan);
+    
+    // Find current todo ID from latest plan
+    let currentTodoId: string | undefined = undefined;
+    
+    if (planUpdateSteps.length > 0) {
+      // Find the in_progress todo from the latest plan
+      const latestPlan = planUpdateSteps[planUpdateSteps.length - 1];
+      if (latestPlan) {
+        const inProgressTodo = latestPlan.todos.find(t => t.status === 'in_progress');
+        currentTodoId = inProgressTodo?.id;
+      }
+    }
+
     return (
       <div className="overflow-hidden w-full">
         <>
+          {/* Agent Todo List */}
+          {plan && (
+            <div className="mb-4">
+              <AgentTodoList
+                plan={plan}
+                currentTodoId={currentTodoId}
+              />
+            </div>
+          )}
+          
+          {/* Agent Timeline - Hidden in simplified mode, artifacts are primary UI */}
+          
           <div className=" flex gap-2 items-center text-sm text-bolt-elements-textSecondary mb-2">
             {(codeContext || chatSummary) && (
               <Popover side="right" align="start" trigger={<div className="i-ph:info" />}>

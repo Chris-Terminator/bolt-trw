@@ -133,8 +133,9 @@ export const ChatImpl = memo(
       (project) => project.id === supabaseConn.selectedProjectId,
     );
     const supabaseAlert = useStore(workbenchStore.supabaseAlert);
-    const { activeProviders, promptId, autoSelectTemplate, contextOptimizationEnabled } = useSettings();
+    const { activeProviders, promptId, autoSelectTemplate, contextOptimizationEnabled, agentMaxSteps } = useSettings();
     const [llmErrorAlert, setLlmErrorAlert] = useState<LlmErrorAlertType | undefined>(undefined);
+    const [agentModeEnabled, setAgentModeEnabled] = useState(false);
     const [model, setModel] = useState(() => {
       const savedModel = Cookies.get('selectedModel');
       return savedModel || DEFAULT_MODEL;
@@ -182,6 +183,8 @@ export const ChatImpl = memo(
           },
         },
         maxLLMSteps: mcpSettings.maxLLMSteps,
+        agentMode: agentModeEnabled,
+        // Simplified agent mode - no complex config needed
       },
       sendExtraMessageFields: true,
       onError: (e) => {
@@ -659,9 +662,26 @@ export const ChatImpl = memo(
             return message;
           }
 
+          // For agent messages, check if we have content from parsedMessages
+          let messageContent = parsedMessages[message.id] || message.content;
+          
+          // If this is an assistant message with agentComplete annotation, use the final answer
+          if (message.role === 'assistant' && message.annotations && Array.isArray(message.annotations)) {
+            const agentCompleteAnnotation = message.annotations.find(
+              (annotation) =>
+                annotation &&
+                typeof annotation === 'object' &&
+                'type' in annotation &&
+                (annotation as any).type === 'agentComplete'
+            );
+            if (agentCompleteAnnotation && (agentCompleteAnnotation as any).finalAnswer) {
+              messageContent = (agentCompleteAnnotation as any).finalAnswer;
+            }
+          }
+
           return {
             ...message,
-            content: parsedMessages[message.id] || '',
+            content: messageContent,
           };
         })}
         enhancePrompt={() => {
@@ -697,6 +717,8 @@ export const ChatImpl = memo(
         selectedElement={selectedElement}
         setSelectedElement={setSelectedElement}
         addToolResult={addToolResult}
+        agentModeEnabled={agentModeEnabled}
+        setAgentModeEnabled={setAgentModeEnabled}
       />
     );
   },

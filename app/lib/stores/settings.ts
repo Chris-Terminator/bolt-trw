@@ -5,6 +5,7 @@ import type { TabVisibilityConfig, TabWindowConfig, UserTabConfig } from '~/comp
 import { DEFAULT_TAB_CONFIG } from '~/components/@settings/core/constants';
 import { toggleTheme } from './theme';
 import { create } from 'zustand';
+import type { AgentConfig } from '~/types/agent';
 
 export interface Shortcut {
   key: string;
@@ -125,6 +126,7 @@ const SETTINGS_KEYS = {
   EVENT_LOGS: 'isEventLogsEnabled',
   PROMPT_ID: 'promptId',
   DEVELOPER_MODE: 'isDeveloperMode',
+  AGENT_MAX_STEPS: 'agentMaxSteps',
 } as const;
 
 // Initialize settings from localStorage or defaults
@@ -147,6 +149,25 @@ const getInitialSettings = () => {
     }
   };
 
+  const getStoredNumber = (key: string, defaultValue: number): number => {
+    if (!isBrowser) {
+      return defaultValue;
+    }
+
+    const stored = localStorage.getItem(key);
+
+    if (stored === null) {
+      return defaultValue;
+    }
+
+    try {
+      const parsed = JSON.parse(stored);
+      return typeof parsed === 'number' ? parsed : defaultValue;
+    } catch {
+      return defaultValue;
+    }
+  };
+
   return {
     latestBranch: getStoredBoolean(SETTINGS_KEYS.LATEST_BRANCH, false),
     autoSelectTemplate: getStoredBoolean(SETTINGS_KEYS.AUTO_SELECT_TEMPLATE, true),
@@ -154,6 +175,7 @@ const getInitialSettings = () => {
     eventLogs: getStoredBoolean(SETTINGS_KEYS.EVENT_LOGS, true),
     promptId: isBrowser ? localStorage.getItem(SETTINGS_KEYS.PROMPT_ID) || 'default' : 'default',
     developerMode: getStoredBoolean(SETTINGS_KEYS.DEVELOPER_MODE, false),
+    agentMaxSteps: getStoredNumber(SETTINGS_KEYS.AGENT_MAX_STEPS, 20),
   };
 };
 
@@ -165,6 +187,52 @@ export const autoSelectStarterTemplate = atom<boolean>(initialSettings.autoSelec
 export const enableContextOptimizationStore = atom<boolean>(initialSettings.contextOptimization);
 export const isEventLogsEnabled = atom<boolean>(initialSettings.eventLogs);
 export const promptStore = atom<string>(initialSettings.promptId);
+export const agentMaxStepsStore = atom<number>(initialSettings.agentMaxSteps);
+
+// Agent configuration store
+const getInitialAgentConfig = (): AgentConfig => {
+  const defaultConfig: AgentConfig = {
+    mode: 'plan_act',
+    maxSteps: 10,
+    maxTokensPerStep: 2000,
+    temperature: 0.7,
+    tools: [],
+    timeoutMs: 300000, // 5 minutes
+    streamSteps: true,
+  };
+
+  if (!isBrowser) {
+    return defaultConfig;
+  }
+
+  try {
+    const saved = localStorage.getItem('bolt_agent_config');
+    if (saved) {
+      return { ...defaultConfig, ...JSON.parse(saved) };
+    }
+  } catch (error) {
+    console.warn('Failed to parse agent config:', error);
+  }
+
+  return defaultConfig;
+};
+
+export const agentConfigStore = atom<AgentConfig>(getInitialAgentConfig());
+export const agentModeEnabledStore = atom<boolean>(false);
+
+// Helper to update agent config with persistence
+export const updateAgentConfig = (config: Partial<AgentConfig>) => {
+  const current = agentConfigStore.get();
+  const updated = { ...current, ...config };
+  agentConfigStore.set(updated);
+  localStorage.setItem('bolt_agent_config', JSON.stringify(updated));
+};
+
+// Helper to toggle agent mode
+export const toggleAgentMode = (enabled: boolean) => {
+  agentModeEnabledStore.set(enabled);
+  localStorage.setItem('bolt_agent_mode_enabled', JSON.stringify(enabled));
+};
 
 // Helper functions to update settings with persistence
 export const updateLatestBranch = (enabled: boolean) => {
@@ -190,6 +258,13 @@ export const updateEventLogs = (enabled: boolean) => {
 export const updatePromptId = (id: string) => {
   promptStore.set(id);
   localStorage.setItem(SETTINGS_KEYS.PROMPT_ID, id);
+};
+
+export const updateAgentMaxSteps = (steps: number) => {
+  // Clamp between 10 and 50
+  const clampedSteps = Math.min(50, Math.max(10, steps));
+  agentMaxStepsStore.set(clampedSteps);
+  localStorage.setItem(SETTINGS_KEYS.AGENT_MAX_STEPS, JSON.stringify(clampedSteps));
 };
 
 // Initialize tab configuration from localStorage or defaults

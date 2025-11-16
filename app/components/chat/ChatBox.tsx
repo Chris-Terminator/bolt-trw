@@ -61,6 +61,8 @@ interface ChatBoxProps {
   setDesignScheme?: (scheme: DesignScheme) => void;
   selectedElement?: ElementInfo | null;
   setSelectedElement?: ((element: ElementInfo | null) => void) | undefined;
+  agentModeEnabled?: boolean;
+  setAgentModeEnabled?: (enabled: boolean) => void;
 }
 
 export const ChatBox: React.FC<ChatBoxProps> = (props) => {
@@ -261,6 +263,22 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
         <div className="flex justify-between items-center text-sm p-4 pt-2">
           <div className="flex gap-1 items-center">
             <ColorSchemeDialog designScheme={props.designScheme} setDesignScheme={props.setDesignScheme} />
+            <IconButton
+              title={props.agentModeEnabled ? 'Agent Mode: ON' : 'Agent Mode: OFF'}
+              className={classNames(
+                'transition-all flex items-center gap-1 px-1.5',
+                props.agentModeEnabled
+                  ? '!bg-bolt-elements-item-backgroundAccent !text-bolt-elements-item-contentAccent'
+                  : 'bg-bolt-elements-item-backgroundDefault text-bolt-elements-item-contentDefault',
+              )}
+              onClick={() => {
+                props.setAgentModeEnabled?.(!props.agentModeEnabled);
+                toast.success(props.agentModeEnabled ? 'Agent mode disabled' : 'Agent mode enabled');
+              }}
+            >
+              <div className={`i-ph:robot ${props.agentModeEnabled ? 'text-bolt-elements-item-contentAccent' : ''} text-xl`} />
+              {props.agentModeEnabled ? <span className="text-xs">Agent</span> : <span />}
+            </IconButton>
             <McpTools />
             <IconButton title="Upload file" className="transition-all" onClick={() => props.handleFileUpload()}>
               <div className="i-ph:paperclip text-xl"></div>

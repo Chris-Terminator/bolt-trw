@@ -81,6 +81,8 @@ interface BaseChatProps {
   selectedElement?: ElementInfo | null;
   setSelectedElement?: (element: ElementInfo | null) => void;
   addToolResult?: ({ toolCallId, result }: { toolCallId: string; result: any }) => void;
+  agentModeEnabled?: boolean;
+  setAgentModeEnabled?: (enabled: boolean) => void;
 }
 
 export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
@@ -130,6 +132,8 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       addToolResult = () => {
         throw new Error('addToolResult not implemented');
       },
+      agentModeEnabled,
+      setAgentModeEnabled,
     },
     ref,
   ) => {
@@ -465,6 +469,8 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                   setDesignScheme={setDesignScheme}
                   selectedElement={selectedElement}
                   setSelectedElement={setSelectedElement}
+                  agentModeEnabled={agentModeEnabled}
+                  setAgentModeEnabled={setAgentModeEnabled}
                 />
               </div>
             </StickToBottom>
