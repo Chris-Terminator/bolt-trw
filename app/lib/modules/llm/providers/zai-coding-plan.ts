@@ -17,15 +17,15 @@ export default class GLMCodingProvider extends BaseProvider {
       name: 'glm-4.6',
       label: 'GLM-4.6',
       provider: 'GLM Code Plan',
-      maxTokenAllowed: 200000,
-      maxCompletionTokens: 128000,
+      maxTokenAllowed: 204800,
+      maxCompletionTokens: 131072,
     },
     {
       name: 'glm-4.5-air',
       label: 'GLM-4.5 Air',
       provider: 'GLM Code Plan',
-      maxTokenAllowed: 128000,
-      maxCompletionTokens: 96000,
+      maxTokenAllowed: 131072,
+      maxCompletionTokens: 98304,
     },
   ];
 
