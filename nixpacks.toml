@@ -13,4 +13,5 @@ paths = [
   "node_modules",
   ".next",
   "build"
+
 ]

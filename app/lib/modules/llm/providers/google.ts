@@ -15,7 +15,7 @@ export default class GoogleProvider extends BaseProvider {
   staticModels: ModelInfo[] = [
     /*
      * Essential fallback models - only the most reliable/stable ones
-     * Gemini 3 Pro Preivew: 1M context, 64K output limit (verified from API docs) - Latest Flagship model
+     * Gemini 3 Pro: 1M context, 65.5K output limit (verified from API docs)
      */
     {
       name: 'gemini-3-pro-preview',
@@ -24,7 +24,7 @@ export default class GoogleProvider extends BaseProvider {
       maxTokenAllowed: 1048576,
       maxCompletionTokens: 65536,
     },
-
+    
     {
       name: 'gemini-2.5-pro',
       label: 'Gemini 2.5 Pro',
