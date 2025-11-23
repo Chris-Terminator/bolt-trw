@@ -12,7 +12,7 @@
   },
   "scripts": {
     "deploy": "npm run build && wrangler pages deploy",
-    "build": "remix vite:build",
+    "build": "NODE_OPTIONS='--max-old-space-size=4096' remix vite:build",
     "dev": "node pre-start.cjs  && remix vite:dev",
     "test": "vitest --run",
     "test:watch": "vitest",
@@ -172,6 +172,7 @@
     "@types/electron": "^1.6.12",
     "@types/file-saver": "^2.0.7",
     "@types/js-cookie": "^3.0.6",
+    "@types/node": "^22.10.2",
     "@types/path-browserify": "^1.0.3",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",

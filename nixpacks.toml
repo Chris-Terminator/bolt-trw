@@ -1,0 +1,16 @@
+[phases.setup]
+# Nixpacks auto-detects Node.js from package.json
+
+[build]
+cmds = ["pnpm run build"]
+
+[start]
+cmd = "pnpm run dockerstart"
+
+[cache]
+paths = [
+  "/root/.pnpm-store",
+  "node_modules",
+  ".next",
+  "build"
+]

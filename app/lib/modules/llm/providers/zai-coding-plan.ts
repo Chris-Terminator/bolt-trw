@@ -17,15 +17,15 @@ export default class GLMCodingProvider extends BaseProvider {
       name: 'glm-4.6',
       label: 'GLM-4.6',
       provider: 'GLM Code Plan',
-      maxTokenAllowed: 200000,
-      maxCompletionTokens: 128000,
+      maxTokenAllowed: 204800,
+      maxCompletionTokens: 131072,
     },
     {
       name: 'glm-4.5-air',
       label: 'GLM-4.5 Air',
       provider: 'GLM Code Plan',
-      maxTokenAllowed: 128000,
-      maxCompletionTokens: 96000,
+      maxTokenAllowed: 131072,
+      maxCompletionTokens: 98304,
     },
   ];
 
@@ -59,10 +59,29 @@ export default class GLMCodingProvider extends BaseProvider {
       throw new Error(`Missing API key for ${this.name} provider`);
     }
 
-    return createOpenAI({
+        return createOpenAI({
       apiKey,
       baseURL: 'https://api.z.ai/api/coding/paas/v4',
       compatibility: "compatible",
+      fetch: async (url, options) => {
+        if (options?.body) {
+          const body = JSON.parse(options.body as string);
+          // Check if system prompt exists as a separate parameter
+          if (body.system) {
+            // Move system prompt to the beginning of messages array
+            body.messages = [
+              { role: 'system', content: body.system },
+              ...(body.messages || [])
+            ];
+            // Remove the separate system parameter
+            delete body.system;
+            // Update the request body
+            options.body = JSON.stringify(body);
+          }
+        }
+        return fetch(url, options);
+      },
     })(model);
+
   }
 }

@@ -1,10 +1,10 @@
-import { json } from '@remix-run/cloudflare';
+import { json } from '@remix-run/node';
 import JSZip from 'jszip';
 
 // Function to detect if we're running in Cloudflare
 function isCloudflareEnvironment(context: any): boolean {
   // Check if we're in production AND have Cloudflare Pages specific env vars
-  const isProduction = process.env.NODE_ENV === 'production';
+  const isProduction = typeof process !== 'undefined' && process.env?.NODE_ENV === 'production';
   const hasCfPagesVars = !!(
     context?.cloudflare?.env?.CF_PAGES ||
     context?.cloudflare?.env?.CF_PAGES_URL ||
@@ -34,7 +34,7 @@ async function fetchRepoContentsCloudflare(repo: string, githubToken?: string) {
   const repoData = (await repoResponse.json()) as any;
   const defaultBranch = repoData.default_branch;
 
-  // Get the tree recursively
+  // Get tree recursively
   const treeResponse = await fetch(`${baseUrl}/repos/${repo}/git/trees/${defaultBranch}?recursive=1`, {
     headers: {
       Accept: 'application/vnd.github.v3+json',
@@ -95,7 +95,10 @@ async function fetchRepoContentsCloudflare(repo: string, githubToken?: string) {
         }
 
         const contentData = (await contentResponse.json()) as any;
-        const content = atob(contentData.content.replace(/\s/g, ''));
+        // Decode base64 content - works in both Node.js and browser/Cloudflare environments
+        const content = typeof Buffer !== 'undefined'
+          ? Buffer.from(contentData.content, 'base64').toString('utf-8')
+          : atob(contentData.content);
 
         return {
           name: file.path.split('/').pop() || '',
@@ -120,12 +123,12 @@ async function fetchRepoContentsCloudflare(repo: string, githubToken?: string) {
   return fileContents;
 }
 
-// Your existing method for non-Cloudflare environments
+// Updated method for non-Cloudflare environments that uses default branch instead of latest release
 async function fetchRepoContentsZip(repo: string, githubToken?: string) {
   const baseUrl = 'https://api.github.com';
 
-  // Get the latest release
-  const releaseResponse = await fetch(`${baseUrl}/repos/${repo}/releases/latest`, {
+  // Get repository info to find default branch
+  const repoResponse = await fetch(`${baseUrl}/repos/${repo}`, {
     headers: {
       Accept: 'application/vnd.github.v3+json',
       'User-Agent': 'bolt.diy-app',
@@ -133,14 +136,17 @@ async function fetchRepoContentsZip(repo: string, githubToken?: string) {
     },
   });
 
-  if (!releaseResponse.ok) {
-    throw new Error(`GitHub API error: ${releaseResponse.status} - ${releaseResponse.statusText}`);
+  if (!repoResponse.ok) {
+    throw new Error(`Repository not found: ${repo}`);
   }
 
-  const releaseData = (await releaseResponse.json()) as any;
-  const zipballUrl = releaseData.zipball_url;
+  const repoData = (await repoResponse.json()) as any;
+  const defaultBranch = repoData.default_branch;
 
-  // Fetch the zipball
+  // Use the default branch instead of latest release
+  const zipballUrl = `${baseUrl}/repos/${repo}/zipball/${defaultBranch}`;
+
+  // Fetch zipball
   const zipResponse = await fetch(zipballUrl, {
     headers: {
       ...(githubToken ? { Authorization: `Bearer ${githubToken}` } : {}),
@@ -148,7 +154,7 @@ async function fetchRepoContentsZip(repo: string, githubToken?: string) {
   });
 
   if (!zipResponse.ok) {
-    throw new Error(`Failed to fetch release zipball: ${zipResponse.status}`);
+    throw new Error(`Failed to fetch repository zipball: ${zipResponse.status}`);
   }
 
   // Get the zip content as ArrayBuffer
@@ -159,7 +165,7 @@ async function fetchRepoContentsZip(repo: string, githubToken?: string) {
 
   // Find the root folder name
   let rootFolderName = '';
-  zip.forEach((relativePath) => {
+  zip.forEach((relativePath: string) => {
     if (!rootFolderName && relativePath.includes('/')) {
       rootFolderName = relativePath.split('/')[0];
     }
@@ -211,7 +217,8 @@ export async function loader({ request, context }: { request: Request; context: 
 
   try {
     // Access environment variables from Cloudflare context or process.env
-    const githubToken = context?.cloudflare?.env?.GITHUB_TOKEN || process.env.GITHUB_TOKEN;
+    const githubToken = context?.cloudflare?.env?.GITHUB_TOKEN ||
+      (typeof process !== 'undefined' ? process.env.GITHUB_TOKEN : undefined);
 
     let fileList;
 
