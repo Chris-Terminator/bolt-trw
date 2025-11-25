@@ -9,7 +9,7 @@ export default class GLMCodingProvider extends BaseProvider {
   getApiKeyLink = 'https://z.ai/subscribe';
 
   config = {
-    apiTokenKey: 'ZAI_API_KEY',
+    apiTokenKey: 'GLM_CODING_API_KEY',
   };
 
   staticModels: ModelInfo[] = [
