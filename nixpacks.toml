@@ -1,11 +1,12 @@
 [phases.setup]
 # Nixpacks auto-detects Node.js from package.json
+nixPkgs = ["nodejs", "python3", "git"]
 
 [build]
 cmds = ["pnpm run build:node"]
 
 [start]
-cmd = "pnpm exec remix-serve build/server/index.js"
+cmd = "pnpm run dockerstart"
 
 [cache]
 paths = [
