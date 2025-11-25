@@ -1,5 +1,6 @@
 [phases.setup]
 # Nixpacks auto-detects Node.js from package.json
+nixPkgs = ["nodejs", "python3", "git"]
 
 [build]
 cmds = ["pnpm run build:node"]
