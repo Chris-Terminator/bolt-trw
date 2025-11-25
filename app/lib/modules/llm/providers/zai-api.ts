@@ -77,25 +77,6 @@ export default class ZAIProvider extends BaseProvider {
       apiKey,
       baseURL: 'https://api.z.ai/api/paas/v4',
       compatibility: "compatible",
-      fetch: async (url, options) => {
-        if (options?.body) {
-          const body = JSON.parse(options.body as string);
-          // Check if system prompt exists as a separate parameter
-          if (body.system) {
-            // Move system prompt to the beginning of messages array
-            body.messages = [
-              { role: 'system', content: body.system },
-              ...(body.messages || [])
-            ];
-            // Remove the separate system parameter
-            delete body.system;
-            // Update the request body
-            options.body = JSON.stringify(body);
-          }
-        }
-        return fetch(url, options);
-      },
     })(model);
-
   }
 }

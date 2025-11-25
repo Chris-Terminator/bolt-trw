@@ -39,7 +39,7 @@ function parseCookies(cookieHeader: string): Record<string, string> {
 }
 
 async function chatAction({ context, request }: ActionFunctionArgs) {
-  const { messages, files, promptId, contextOptimization, supabase, chatMode, designScheme, maxLLMSteps } =
+  const { messages, files, promptId, contextOptimization, supabase, chatMode, designScheme, maxLLMSteps, alwaysAllowMcp } =
     await request.json<{
       messages: Messages;
       files: any;
@@ -56,6 +56,7 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
         };
       };
       maxLLMSteps: number;
+      alwaysAllowMcp?: boolean;
     }>();
 
   const cookieHeader = request.headers.get('Cookie');
@@ -199,7 +200,7 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
         const options: StreamingOptions = {
           supabaseConnection: supabase,
           toolChoice: 'auto',
-          tools: mcpService.toolsWithoutExecute,
+          tools: alwaysAllowMcp ? mcpService.tools : mcpService.toolsWithoutExecute,
           maxSteps: maxLLMSteps,
           onStepFinish: ({ toolCalls }) => {
             // add tool call annotations for frontend processing

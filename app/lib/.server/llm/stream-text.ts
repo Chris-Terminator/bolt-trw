@@ -3,7 +3,7 @@ import { MAX_TOKENS, type FileMap } from './constants';
 import { getSystemPrompt } from '~/lib/common/prompts/prompts';
 import { DEFAULT_MODEL, DEFAULT_PROVIDER, MODIFICATIONS_TAG_NAME, PROVIDER_LIST, WORK_DIR } from '~/utils/constants';
 import type { IProviderSetting } from '~/types/model';
-import { PromptLibrary } from '~/lib/common/prompt-library';
+import { PromptLibrary, type MCPToolInfo } from '~/lib/common/prompt-library';
 import { allowedHTMLElements } from '~/utils/markdown';
 import { LLMManager } from '~/lib/modules/llm/manager';
 import { createScopedLogger } from '~/utils/logger';
@@ -145,12 +145,27 @@ export async function streamText(props: {
     `Token limits for model ${modelDetails.name}: maxTokens=${dynamicMaxTokens}, maxTokenAllowed=${modelDetails.maxTokenAllowed}, maxCompletionTokens=${(modelDetails as any)?.maxCompletionTokens ?? 'n/a'}`,
   );
 
+  // Extract MCP tool information from available tools
+  const mcpTools: MCPToolInfo[] = [];
+  if (options?.tools) {
+    for (const [toolName, tool] of Object.entries(options.tools)) {
+      // Extract server name from tool metadata if available
+      const serverName = (tool as any).serverName || 'unknown';
+      mcpTools.push({
+        name: toolName,
+        description: tool.description || 'No description available',
+        serverName,
+      });
+    }
+  }
+
   let systemPrompt =
     PromptLibrary.getPropmtFromLibrary(promptId || 'default', {
       cwd: WORK_DIR,
       allowedHtmlElements: allowedHTMLElements,
       modificationTagName: MODIFICATIONS_TAG_NAME,
       designScheme,
+      mcpTools: mcpTools.length > 0 ? mcpTools : undefined,
       supabase: {
         isConnected: options?.supabaseConnection?.isConnected || false,
         hasSelectedProject: options?.supabaseConnection?.hasSelectedProject || false,

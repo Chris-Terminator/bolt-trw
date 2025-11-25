@@ -33,6 +33,8 @@ export default function McpTab() {
   const initialize = useMCPStore((state) => state.initialize);
   const updateSettings = useMCPStore((state) => state.updateSettings);
   const checkServersAvailabilities = useMCPStore((state) => state.checkServersAvailabilities);
+  const alwaysAllowMcp = useMCPStore((state) => state.settings.alwaysAllowMcp);
+  const setAlwaysAllowMcp = useMCPStore((state) => state.updateSettings);
 
   const [isSaving, setIsSaving] = useState(false);
   const [mcpConfigText, setMCPConfigText] = useState('');
@@ -81,6 +83,7 @@ export default function McpTab() {
       await updateSettings({
         mcpConfig: parsedConfig,
         maxLLMSteps,
+        alwaysAllowMcp,
       });
       toast.success('MCP configuration saved');
 
@@ -90,6 +93,19 @@ export default function McpTab() {
       toast.error('Failed to save MCP configuration');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleToggleAlwaysAllow = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      await updateSettings({
+        mcpConfig: settings.mcpConfig,
+        maxLLMSteps: settings.maxLLMSteps,
+        alwaysAllowMcp: e.target.checked,
+      });
+      toast.success(`Always allow MCP tool execution ${e.target.checked ? 'enabled' : 'disabled'}`);
+    } catch (error) {
+      toast.error('Failed to update always allow setting');
     }
   };
 
@@ -192,32 +208,42 @@ export default function McpTab() {
               className="w-full px-3 py-2 text-bolt-elements-textPrimary text-sm rounded-lg bg-white dark:bg-bolt-elements-background-depth-4 border border-bolt-elements-borderColor dark:border-bolt-elements-borderColor-dark focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <div className="mt-2 text-sm text-bolt-elements-textSecondary">
-            The MCP configuration format is identical to the one used in Claude Desktop.
-            <a
-              href="https://modelcontextprotocol.io/examples"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-bolt-elements-link hover:underline inline-flex items-center gap-1"
-            >
-              View example servers
-              <div className="i-ph:arrow-square-out w-4 h-4" />
-            </a>
-          </div>
+        <div className="mt-2 text-sm text-bolt-elements-textSecondary">
+          The MCP configuration format is identical to the one used in Claude Desktop.
+          <a
+            href="https://modelcontextprotocol.io/examples"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-bolt-elements-link hover:underline inline-flex items-center gap-1"
+          >
+            View example servers
+            <div className="i-ph:arrow-square-out w-4 h-4" />
+          </a>
         </div>
-      </section>
+        
+        <div className="flex items-center justify-between mt-4">
+          <label className="flex items-center gap-2 text-sm text-bolt-elements-textSecondary">
+            <input
+              type="checkbox"
+              id="always-allow-mcp"
+              checked={alwaysAllowMcp}
+              onChange={handleToggleAlwaysAllow}
+              className="w-4 h-4 text-bolt-elements-textPrimary rounded border-bolt-elements-borderColor bg-bolt-elements-background-depth-3 focus:ring-2 focus:ring-bolt-elements-focus"
+            />
+            <span className="ml-2">Always allow MCP tool execution</span>
+          </label>
+        </div>
+        
+        <div className="flex gap-2 mt-4">
+          <button
+            onClick={handleLoadExample}
+            className="px-4 py-2 rounded-lg text-sm border border-bolt-elements-borderColor
+                      bg-bolt-elements-background-depth-2 text-bolt-elements-textSecondary
+                      hover:bg-bolt-elements-background-depth-3"
+          >
+            Load Example
+          </button>
 
-      <div className="flex flex-wrap justify-between gap-3 mt-6">
-        <button
-          onClick={handleLoadExample}
-          className="px-4 py-2 rounded-lg text-sm border border-bolt-elements-borderColor
-                    bg-bolt-elements-background-depth-2 text-bolt-elements-textSecondary
-                    hover:bg-bolt-elements-background-depth-3"
-        >
-          Load Example
-        </button>
-
-        <div className="flex gap-2">
           <button
             onClick={handleSave}
             disabled={isSaving || !parsedConfig}
@@ -234,6 +260,7 @@ export default function McpTab() {
           </button>
         </div>
       </div>
+    </section>
     </div>
   );
 }

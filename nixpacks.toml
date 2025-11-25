@@ -2,7 +2,7 @@
 # Nixpacks auto-detects Node.js from package.json
 
 [build]
-cmds = ["pnpm run build"]
+cmds = ["pnpm run build:node"]
 
 [start]
 cmd = "pnpm run dockerstart"

@@ -215,8 +215,10 @@ export class MCPService {
         }
       }
 
-      this._tools[toolName] = tool;
-      this._toolsWithoutExecute[toolName] = { ...tool, execute: undefined };
+      // Add serverName metadata to tool for easy access
+      const toolWithMetadata = Object.assign({}, tool, { serverName });
+      this._tools[toolName] = toolWithMetadata;
+      this._toolsWithoutExecute[toolName] = { ...toolWithMetadata, execute: undefined };
       this._toolNamesToServerNames.set(toolName, serverName);
     }
   }

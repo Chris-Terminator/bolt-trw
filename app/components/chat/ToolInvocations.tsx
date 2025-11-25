@@ -13,6 +13,7 @@ import { cubicEasingFn } from '~/utils/easings';
 import { logger } from '~/utils/logger';
 import { themeStore, type Theme } from '~/lib/stores/theme';
 import { useStore } from '@nanostores/react';
+import { useMCPStore } from '~/lib/stores/mcp';
 import type { ToolCallAnnotation } from '~/types/context';
 
 const highlighterOptions = {
@@ -288,11 +289,13 @@ const ToolCallsList = memo(({ toolInvocations, toolCallAnnotations, addToolResul
 
   useEffect(() => {
     const expandedState: { [id: string]: boolean } = {};
+    
     toolInvocations.forEach((inv) => {
       if (inv.toolInvocation.state === 'call') {
         expandedState[inv.toolInvocation.toolCallId] = true;
       }
     });
+    
     setExpanded(expandedState);
   }, [toolInvocations]);
 

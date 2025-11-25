@@ -7,6 +7,7 @@ const isBrowser = typeof window !== 'undefined';
 type MCPSettings = {
   mcpConfig: MCPConfig;
   maxLLMSteps: number;
+  alwaysAllowMcp: boolean;
 };
 
 const defaultSettings = {
@@ -14,6 +15,7 @@ const defaultSettings = {
   mcpConfig: {
     mcpServers: {},
   },
+  alwaysAllowMcp: false,
 } satisfies MCPSettings;
 
 type Store = {
@@ -22,6 +24,7 @@ type Store = {
   serverTools: MCPServerTools;
   error: string | null;
   isUpdatingConfig: boolean;
+  alwaysAllowMcp: boolean;
 };
 
 type Actions = {
@@ -36,6 +39,7 @@ export const useMCPStore = create<Store & Actions>((set, get) => ({
   serverTools: {},
   error: null,
   isUpdatingConfig: false,
+  alwaysAllowMcp: false,
   initialize: async () => {
     if (get().isInitialized) {
       return;

@@ -182,6 +182,7 @@ export const ChatImpl = memo(
           },
         },
         maxLLMSteps: mcpSettings.maxLLMSteps,
+        alwaysAllowMcp: mcpSettings.alwaysAllowMcp,
       },
       sendExtraMessageFields: true,
       onError: (e) => {

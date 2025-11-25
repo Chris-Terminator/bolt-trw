@@ -9,12 +9,18 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 export default defineConfig((config) => {
+  const isNodeRuntime = process.env.RUNTIME === 'node';
+  
   return {
     define: {
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
+      'process.env.RUNTIME': JSON.stringify(process.env.RUNTIME || 'cloudflare'),
     },
     build: {
       target: 'esnext',
+      rollupOptions: isNodeRuntime ? {
+        input: './app/entry.server.node.tsx',
+      } : undefined,
     },
     plugins: [
       nodePolyfills({
@@ -40,7 +46,7 @@ export default defineConfig((config) => {
           return null;
         },
       },
-      config.mode !== 'test' && remixCloudflareDevProxy(),
+      config.mode !== 'test' && process.env.RUNTIME !== 'node' && remixCloudflareDevProxy(),
       remixVitePlugin({
         future: {
           v3_fetcherPersist: true,
