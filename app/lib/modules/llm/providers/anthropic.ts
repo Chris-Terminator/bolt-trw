@@ -42,6 +42,15 @@ export default class AnthropicProvider extends BaseProvider {
       maxTokenAllowed: 200000,
       maxCompletionTokens: 32000,
     },
+
+    //Cladue Opus 4.5: 200k context, 64k output limit
+    {
+      name: 'claude-opus-4-5-20251101',
+      label: 'Claude Opus 4.5',
+      provider: 'Anthropic',
+      maxTokenAllowed: 200000,
+      maxCompletionTokens: 64000,
+    },
   ];
 
   async getDynamicModels(
